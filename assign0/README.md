@@ -20,13 +20,15 @@ You can't change the access of memory address 0, but you can make it not happen.
 
 
 Things you will need to find out:
-0. Where is the program counter stored, relative to where the signal/flags are stored?
+1. Where is the program counter stored, relative to where the signal/flags are stored?
 .. once you know this, you can increment the pointer pointing to the segment fault flag to point at the program counter
 
-1. How long is the bad instruction?
+2. How long is the bad instruction?
 .. you need to look at the assembly and determine how long the bad instruction is, in order to increment the program counter by the correct amount to skip to the next instruction.
 
 Some helpful bits:
-You can compile C to assmebly, rather than machine code, by compiling with the -S switch.
-You can compile C with debugging information by using the -g switch, so that you can use GDB, the C debugger.
- You can do a lot of things with GDB. You can, for instance, step through the code line by line until it segment faults, and look at stack frame data as you go.
+* You can compile C to assmebly, rather than machine code, by compiling with the -S switch.
+
+* You can compile C with debugging information by using the -g switch, so that you can use GDB, the C debugger.
+
+* You can do a lot of things with GDB. You can, for instance, step through the code line by line until it segment faults, and look at stack frame data as you go.
