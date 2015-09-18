@@ -20,6 +20,7 @@ You can't change the access of memory address 0, but you can make it not happen.
 
 
 Things you will need to find out:
+
 1. Where is the program counter stored, relative to where the signal/flags are stored?
 .. once you know this, you can increment the pointer pointing to the segment fault flag to point at the program counter
 
