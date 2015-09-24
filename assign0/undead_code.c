@@ -5,8 +5,9 @@
 // Postconditions: Generates Segmentation Fault for
 //                               signal handler self-hack
 
-// Student name:
-// Ilab machine used:
+// Student name: Shihang Zhang
+// Ilab machine used: cpp.cs.rutgers.edu
+// Compilation command used: -m32 -O0
 
 #include <signal.h>
 #include <stdio.h>
@@ -14,13 +15,12 @@
 
 void segment_fault_handler(int signum)
 {
-	printf("I am slain!\n");
-
-	//Use the signnum to construct a pointer to flag on stored stack
-	//Increment pointer down to the stored PC
-	//Increment value at pointer by length of bad instruction
-
+        void *p;
+        printf("I am slain!\n");
 	
+	p = (void *) &signum; //Use the signum to construct a pointer to flag on stored stack
+	p += 0x4c-0x10; //Increment pointer down to the stored PC
+	*(int *)p += 0x6; //Increment value at pointer by length of bad instruction
 	
 }
 
