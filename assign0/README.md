@@ -9,7 +9,6 @@ This assignment is individual. Feel free to converse with other students about t
 
 
 # Specifics of Operation
-
 Taking the skeleton code attached below, add a signal handler that causes the code to run to completion. You can not change any code BUT the signal handler.
 
 The signal handler in the code will be called on any segmentation violation. Dereferencing memory address 0 is pretty much guaranteed to do that. Linux will first run your signal handler to give you a chance to address the segment fault. If you return from the signal handler and the same signal occurs, then Linux will stop your code with a segmentation fault. You must, in the signal handler only, make sure the segmentation fault does not occur a second time. The problem is that Linux will attempt to run the offending instruction again. So you must somehow make it not run that instruction. The key to doing this is the signal number.
