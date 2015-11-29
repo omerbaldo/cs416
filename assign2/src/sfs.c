@@ -36,6 +36,35 @@
 // come indirectly from /usr/include/fuse.h
 //
 
+
+/*-------------------------------------------------------*/
+
+#define BLK_NUM 10
+#define BLK_SIZE 1024
+
+typedef unsigned int u32;
+typedef unsigned char u8;
+
+struct file* g_opened[OPENNUM];
+
+struct superblock {
+    fsblkcnt_t blocks; // total number of blocks
+    size_t block_size;
+}
+
+struct inode {
+    mode_t i_mode; // types of file
+    uid_t i_uid; // user id
+    gid_t i_gid; // group id
+    nlink_t i_links; // links to file
+    off_t i_size; // file size by byte
+    ino_t num; // inode number
+    blkcnt_t i_blocks; // blocks number
+    u32 addresses[BLOCKS_NUM]; // physical block addresses
+}
+
+/*-------------------------------------------------------*/
+
 /**
  * Initialize filesystem
  *
@@ -50,10 +79,12 @@ void *sfs_init(struct fuse_conn_info *conn)
 {
     fprintf(stderr, "in bb-init\n");
     log_msg("\nsfs_init()\n");
-    
+   
     log_conn(conn);
     log_fuse_context(fuse_get_context());
 
+    disk_open("/ilab/users/sz328/cs416/assign2/testfsfile");
+    log_msg("opening dist...");
     return SFS_DATA;
 }
 
@@ -66,6 +97,7 @@ void *sfs_init(struct fuse_conn_info *conn)
  */
 void sfs_destroy(void *userdata)
 {
+    disk_close();
     log_msg("\nsfs_destroy(userdata=0x%08x)\n", userdata);
 }
 
