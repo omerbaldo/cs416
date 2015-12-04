@@ -40,27 +40,28 @@
 /*-------------------------------------------------------*/
 
 #define BLK_NUM 10
-#define BLK_SIZE 1024
-
+#define BLK_SIZE 512
+#define FILENAME_LEN 14
+#defien INODE_SIZE 64
 typedef unsigned int u32;
+typedef unsigned short u16; 
 typedef unsigned char u8;
 
-struct file* g_opened[OPENNUM];
-
 struct superblock {
-    fsblkcnt_t blocks; // total number of blocks
-    size_t block_size;
+     s_blocks; // total number of blocks
+    size_t s_blocksize; // block size
+    u32 s_ino_bitmap; // inode bitmap
 }
 
 struct inode {
-    mode_t i_mode; // types of file
-    uid_t i_uid; // user id
-    gid_t i_gid; // group id
-    nlink_t i_links; // links to file
-    off_t i_size; // file size by byte
-    ino_t num; // inode number
-    blkcnt_t i_blocks; // blocks number
+    u32 i_mode; // types of file
+    u16 i_uid; // user id
+    u16 i_gid; // group id
+    u16 i_links; // links to file
+    u32 i_size; // file size by byte
+    u32 i_blocks; // blocks number
     u32 addresses[BLOCKS_NUM]; // physical block addresses
+    u8 padding[INODE_SIZE-58]; // make the size to be power of 2
 }
 
 /*-------------------------------------------------------*/
@@ -84,7 +85,14 @@ void *sfs_init(struct fuse_conn_info *conn)
     log_fuse_context(fuse_get_context());
 
     disk_open("/ilab/users/sz328/cs416/assign2/testfsfile");
-    log_msg("opening dist...");
+    char buffer[BLOCK_SIZE];
+    int ret;
+    struct superblock sb;
+    if ((ret=block_read(0, buffer)) <= 0) {
+        sb.
+    }
+    
+
     return SFS_DATA;
 }
 

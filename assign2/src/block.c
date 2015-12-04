@@ -37,7 +37,7 @@ void disk_close()
 
 /** Read a block from an open file
  *
- * Read should return (1) exactly @BLOCK_SIZE when succeeded, or (2) 0 when the requested block has never been touched before, or (3) a negtive value when failed. 
+ * Read should return (1) exactly @BLOCK_SIZE when succeeded, or (2) 0 when the requested block has never been touched before, or (3) a negative value when failed. 
  * In cases of error or return value equals to 0, the content of the @buf is set to 0.
  */
 int block_read(const int block_num, void *buf)
