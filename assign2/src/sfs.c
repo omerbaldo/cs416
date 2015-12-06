@@ -398,8 +398,57 @@ int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 	       struct fuse_file_info *fi)
 {
     int retstat = 0;
+/*---------------------------------------------------------*/
+    struct superblock sb;
+    struct inode ino;
+    //struct stat *statbuf;
+    struct dirent *entry;
+    char buffer[BLOCK_SIZE], *data;
+    int nentries, i;
+    off_t read_off;
     
+
+    // Read the superblock
+    memset(buffer, 0, BLOCK_SIZE);
+    block_read(0, buffer);
+    memcpy((void *)&sb, (void *)buffer, sizeof(struct superblock));
     
+    // Read the first inode, containing root directory
+    block_read(sb.s_ino_start, buffer);
+    memcpy((void *)&ino, (void *)buffer, sizeof(struct inode));
+    
+    // Get the dirent
+    data = malloc(ino.i_blocks * BLOCK_SIZE);
+    memset(data, 0, ino->i_blocks * BLOCK_SIZE);
+    for (i = 0; i < ino.i_blocks; i++) {
+        read_off = i * BLOCK_SIZE;
+        block_read(ino.i_addresses[i], buffer);
+        memcpy((void *) data + read_off, (void *)buffer, BLOCK_SIZE);
+    }
+    
+    nentries = ino.i_size / sizeof(struct dirent);
+    entry = (struct dirent *) data;
+    
+    //1. Find the first directory entry following the given offset (see below).
+    // Offset ignored (implementation 1)
+    
+    for (i = 0; i < nentries; i++) {
+        //2. Optionally, create a struct stat that describes the file as for getattr (but FUSE only looks at st_ino and the file-type bits of st_mode).
+        //sfs_getattr(entry_arr[i].d_name, statbuf);
+        
+        //3. Call the filler function with arguments of buf, the null-terminated filename, the address of your struct stat (or NULL if you have none), and the offset of the next directory entry.
+        //4. If filler returns nonzero, or if there are no more files, return 0.
+        if (filler(buf, entry[i].d_name, NULL, 0) != 0 || i + 1 == nentries) {
+            break;
+        }
+        
+        //5. Find the next file in the directory.
+        
+        //6. Go back to step 2.
+    }
+    
+    free(data);
+/*---------------------------------------------------------*/
     return retstat;
 }
 
