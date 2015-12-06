@@ -42,7 +42,8 @@
 #define BLK_NUM 2048
 #define FILENAME_LEN 14
 #define INODE_SIZE 64  //bytes
-#define INODE_NUMBER 32
+#define INODE_NUM 32
+#define INODE_NUM_EACH_BLOCK BLOCK_SIZE/INODE_SIZE
 #define INODE_BLK_NUM 10
 #define FS_MAGIC 0x6789ABCD
 typedef unsigned int u32;
@@ -66,7 +67,7 @@ struct inode {
     u16 i_links; // links to file
     u32 i_size; // file size by byte
     u32 i_blocks; // blocks number
-    u32 addresses[INODE_BLK_NUM]; // physical block addresses
+    u32 i_addresses[INODE_BLK_NUM]; // physical block addresses
     u8 padding[INODE_SIZE-58]; // make the size to be power of 2
 }
 
@@ -95,18 +96,38 @@ void *sfs_init(struct fuse_conn_info *conn)
     char buffer[BLOCK_SIZE];
     int ret;
     struct superblock sb;
+    struct inode ino;
+
+    memset(buffer, 0, BLOCK_SIZE);
     if ((ret=block_read(0, buffer)) <= 0) {
         sb.s_magic = FS_MAGIC;
         sb.s_blocks = BLK_NUM;
         sb.s_root = 0;
         sb.s_ino_start = (u32)(sizeof(struct superblock) / BLOCK_SIZE) + 1;
-        sb.s_ino_blocks = INODE_NUMBER / (BLOCK_SIZE / INODE_SIZE);
+        sb.s_ino_blocks = INODE_NUM / INODE_NUM_EACH_BLOCK;
         sb.s_bitmap_start = sb.s_ino_start+sb.s_ino_blocks;
-        sb.s_bitmap_blocks = 0;
+        sb.s_bitmap_blocks = 1;
         sb.s_data_start = sb.s_bitmap_start+sb.s_bitmap_blocks;
-        sb.s_data_blocks = 0;
-    }
+        sb.s_data_blocks = 1;
 
+        ino.i_links = 1;
+        ino_size = 0;
+        ino.i_blocks = 0;
+
+        memset((void *)buffer, 0, BLOCK_SIZE);
+        memcpy((void *)buffer, (void *)&sb, sizeof(struct superblock));
+        block_write(0, (void *) buffer);
+        memset((void *)buffer, 0, BLOCK_SIZE);
+        memcpy((void *)buffer, (void *)&ino, sizeof(struct inode));
+        block_write(sb.s_ino_start, (void *) buffer);
+    }
+    else {
+        sb = (struct superblock *) buffer;
+        if (sb->s_magic != FS_MAGIC) {
+            //not our file system, overwrite it?
+        }
+    }
+    
 /*--------------------------------------------------------*/
 
     return SFS_DATA;
@@ -135,10 +156,21 @@ int sfs_getattr(const char *path, struct stat *statbuf)
 {
     int retstat = 0;
     char fpath[PATH_MAX];
-    
+
     log_msg("\nsfs_getattr(path=\"%s\", statbuf=0x%08x)\n",
 	  path, statbuf);
+
+/*---------------------------------------------------------*/
+
+    char buffer[BLOCK_SIZE];
+    struct superblock sb;
+    struct inode ino;
+
+    memset(buffer, 0, BLOCK_SIZE);
+    block_read(0, buffer);
     
+/*---------------------------------------------------------*/
+
     return retstat;
 }
 
