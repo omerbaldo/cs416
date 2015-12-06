@@ -43,7 +43,7 @@
 #define FILENAME_LEN 14
 #define INODE_SIZE 64  //bytes
 #define INODE_NUM 32
-#define INODE_NUM_EACH_BLOCK BLOCK_SIZE/INODE_SIZE
+#define INODE_NUM_PER_BLK BLOCK_SIZE/INODE_SIZE
 #define INODE_BLK_NUM 10
 #define FS_MAGIC 0x6789ABCD
 typedef unsigned int u32;
@@ -104,7 +104,7 @@ void *sfs_init(struct fuse_conn_info *conn)
         sb.s_blocks = BLK_NUM;
         sb.s_root = 0;
         sb.s_ino_start = (u32)(sizeof(struct superblock) / BLOCK_SIZE) + 1;
-        sb.s_ino_blocks = INODE_NUM / INODE_NUM_EACH_BLOCK;
+        sb.s_ino_blocks = INODE_NUM / INODE_NUM_PER_BLK;
         sb.s_bitmap_start = sb.s_ino_start+sb.s_ino_blocks;
         sb.s_bitmap_blocks = 1;
         sb.s_data_start = sb.s_bitmap_start+sb.s_bitmap_blocks;
@@ -160,15 +160,56 @@ int sfs_getattr(const char *path, struct stat *statbuf)
     log_msg("\nsfs_getattr(path=\"%s\", statbuf=0x%08x)\n",
 	  path, statbuf);
 
+
 /*---------------------------------------------------------*/
 
     char buffer[BLOCK_SIZE];
+    char *data;
+    struct dirent *entry;
     struct superblock sb;
-    struct inode ino;
+    struct inode root_ino, ino;
+    int nentries;
 
     memset(buffer, 0, BLOCK_SIZE);
     block_read(0, buffer);
-    
+    memcpy((void *)&sb, (void *)buffer, sizeof(struct superblock));
+
+    memset(buffer, 0, BLOCK_SIZE);
+    block_read(sb.s_ino_start, buffer);
+    memcpy((void *)&root_ino, (void *)buffer, sizeof(struct inode));
+
+    memset(statbuf, 0, sizeof(struct stat));
+    if (strcmp("/", path) == 0) {
+        statbuf->st_ino = sb.s_root;
+        statbuf->st_nlink = root_ino.i_links;
+        statbuf->st_size = root_ino.i_size;
+    }
+    else {
+        data = malloc(BLOCK_SIZE * root_ino.i_blocks);
+        for (int i=0; i != root_ino.i_blocks; ++i) {
+            memset(buffer, 0, BLOCK_SIZE);
+            block_read(root_ino.i_addresses[i], buffer);
+            memcpy((void *)&data[BLOCK_SIZE*i], (void *)buffer, BLOCK_SIZE);
+        }
+
+        nentries = root_ino.i_size/sizeof(struct dirent);
+        entry = (struct dirent *) data;
+        for (int i=0; i != nentries; ++i) {
+            if (strcmp(&path[1], entry[i].d_name) == 0) {
+                statbuf->st_ino = entry[i].d_ino;
+
+                // get this inode
+                memset(buffer, 0, BLOCK_SIZE);
+                block_read(sb.s_ino_start+(u32)entry[i].d_ino/INODE_NUM_PER_BLK, buffer);
+                memcpy((void *)&ino, (void *)(((struct inode *)buffer)[entry[i].d_ino%INODE_NUM_PER_BLK]), sizeof(struct inode));
+                statbuf->st_nlink = ino.i_links;
+                statbuf->st_size = ino.i_size;
+                break;
+            }
+        }
+        free(data);
+    }
+
 /*---------------------------------------------------------*/
 
     return retstat;
