@@ -39,28 +39,34 @@
 
 /*-------------------------------------------------------*/
 
-#define BLK_NUM 10
-#define BLK_SIZE 512
+#define BLK_NUM 2048
 #define FILENAME_LEN 14
-#defien INODE_SIZE 64
+#define INODE_SIZE 64  //bytes
+#define INODE_NUMBER 32
+#define INODE_BLK_NUM 10
+#define FS_MAGIC 0x6789ABCD
 typedef unsigned int u32;
 typedef unsigned short u16; 
 typedef unsigned char u8;
 
 struct superblock {
-     s_blocks; // total number of blocks
-    size_t s_blocksize; // block size
-    u32 s_ino_bitmap; // inode bitmap
+    u32 s_magic; // magic number used to distinguish our fs
+    u32 s_blocks; // total number of blocks
+    u32 s_root; // inode number of root directory
+    u32 s_ino_start; // first block of inodes
+    u32 s_ino_blocks; // number of blocks used to store the inodes
+    u32 s_bitmap_start; // first block for allocation bitmap
+    u32 s_bitmap_blocks; // number of blocks used to store the bitmap
+    u32 s_data_start; // first block for data
+    u32 s_data_blocks; // number of blocks
 }
 
 struct inode {
     u32 i_mode; // types of file
-    u16 i_uid; // user id
-    u16 i_gid; // group id
     u16 i_links; // links to file
     u32 i_size; // file size by byte
     u32 i_blocks; // blocks number
-    u32 addresses[BLOCKS_NUM]; // physical block addresses
+    u32 addresses[INODE_BLK_NUM]; // physical block addresses
     u8 padding[INODE_SIZE-58]; // make the size to be power of 2
 }
 
@@ -84,14 +90,24 @@ void *sfs_init(struct fuse_conn_info *conn)
     log_conn(conn);
     log_fuse_context(fuse_get_context());
 
-    disk_open("/ilab/users/sz328/cs416/assign2/testfsfile");
+/*--------------------------------------------------------*/
+
     char buffer[BLOCK_SIZE];
     int ret;
     struct superblock sb;
     if ((ret=block_read(0, buffer)) <= 0) {
-        sb.
+        sb.s_magic = FS_MAGIC;
+        sb.s_blocks = BLK_NUM;
+        sb.s_root = 0;
+        sb.s_ino_start = (u32)(sizeof(struct superblock) / BLOCK_SIZE) + 1;
+        sb.s_ino_blocks = INODE_NUMBER / (BLOCK_SIZE / INODE_SIZE);
+        sb.s_bitmap_start = sb.s_ino_start+sb.s_ino_blocks;
+        sb.s_bitmap_blocks = 0;
+        sb.s_data_start = sb.s_bitmap_start+sb.s_bitmap_blocks;
+        sb.s_data_blocks = 0;
     }
-    
+
+/*--------------------------------------------------------*/
 
     return SFS_DATA;
 }
