@@ -41,7 +41,7 @@
 
 #define BLK_NUM 2048
 #define FILENAME_LEN 14
-#define INODE_SIZE 64  //bytes
+#define INODE_SIZE 128  //bytes
 #define INODE_NUM 32
 #define INODE_NUM_PER_BLK BLOCK_SIZE/INODE_SIZE
 #define INODE_BLK_NUM 10
@@ -64,11 +64,16 @@ struct superblock {
 
 struct inode {
     u32 i_mode; // types of file
+    u16 i_uid; // user id
+    u16 i_gid; // group id
+    u32 i_atime; // la  st access time
+    u32 i_ctime; // last change time
+    u32 i_mtime; // last modify time
     u16 i_links; // links to file
     u32 i_size; // file size by byte
     u32 i_blocks; // blocks number
     u32 i_addresses[INODE_BLK_NUM]; // physical block addresses
-    u8 padding[INODE_SIZE-58]; // make the size to be power of 2
+    u8 padding[INODE_SIZE-70]; // make the size to be power of 2
 };
 
 /*-------------------------------------------------------*/
@@ -112,6 +117,12 @@ void *sfs_init(struct fuse_conn_info *conn)
         sb.s_data_blocks = 0;
 
         ino.i_links = 1;
+        ino.i_mode = S_IFDIR | S_IRWXU;
+        ino.i_uid = getuid();
+        ino.i_gid = getgid();
+        ino.i_atime = time(NULL);
+        ino.i_ctime = ino.i_atime;
+        ino.i_mtime = ino.i_atime;
         ino.i_size = 0;
         ino.i_blocks = 0;
 
@@ -120,7 +131,6 @@ void *sfs_init(struct fuse_conn_info *conn)
         block_write(0, (void *) buffer);
         memset((void *)buffer, 0, BLOCK_SIZE);
         memcpy((void *)buffer, (void *)&ino, sizeof(struct inode));
-        log_msg("%d", sb.s_ino_start);
         block_write(sb.s_ino_start, (void *) buffer);
     }
     else {
@@ -182,9 +192,17 @@ int sfs_getattr(const char *path, struct stat *statbuf)
 
     // memset(statbuf, 0, sizeof(struct stat));
     if (strcmp("/", path) == 0) {
-        log_msg("\nif current path is \\\n");
         statbuf->st_ino = sb.s_root;
-        log_msg("\nroot inode number: %d\n", sb.s_root);
+        statbuf->st_dev = 1;
+        statbuf->st_mode = root_ino.i_mode;
+        statbuf->st_uid = root_ino.i_uid;
+        statbuf->st_gid = root_ino.i_gid;
+        statbuf->st_rdev = 0;
+        statbuf->st_atime = root_ino.i_atime;
+        statbuf->st_ctime = root_ino.i_ctime;
+        statbuf->st_mtime = root_ino.i_mtime;
+        statbuf->st_blksize = BLOCK_SIZE;
+        statbuf->st_blocks = root_ino.i_blocks;
         statbuf->st_nlink = root_ino.i_links;
         statbuf->st_size = root_ino.i_size;
     }
@@ -206,6 +224,16 @@ int sfs_getattr(const char *path, struct stat *statbuf)
                 memset(buffer, 0, BLOCK_SIZE);
                 block_read(sb.s_ino_start+(u32)entry[i].d_ino/INODE_NUM_PER_BLK, buffer);
                 memcpy((void *)&ino, (void *)&((struct inode *)buffer)[entry[i].d_ino%INODE_NUM_PER_BLK], sizeof(struct inode));
+                statbuf->st_dev = 1;
+                statbuf->st_mode = ino.i_mode;
+                statbuf->st_uid = ino.i_uid;
+                statbuf->st_gid = ino.i_gid;
+                statbuf->st_rdev = 0;
+                statbuf->st_atime = ino.i_atime;
+                statbuf->st_ctime = ino.i_ctime;
+                statbuf->st_mtime = ino.i_mtime;
+                statbuf->st_blksize = BLOCK_SIZE;
+                statbuf->st_blocks = ino.i_blocks;
                 statbuf->st_nlink = ino.i_links;
                 statbuf->st_size = ino.i_size;
                 break;
