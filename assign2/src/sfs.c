@@ -45,7 +45,7 @@
 #define INODE_NUM 32
 #define INODE_NUM_PER_BLK BLOCK_SIZE/INODE_SIZE
 #define INODE_BLK_NUM 10
-#define FS_MAGIC 0x6789ABCD
+#define FS_MAGIC 0x6789
 typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
@@ -117,7 +117,7 @@ void *sfs_init(struct fuse_conn_info *conn)
         sb.s_data_blocks = 0;
 
         ino.i_links = 1;
-        ino.i_mode = S_IFDIR | S_IRWXU;
+        ino.i_mode = S_IFDIR | S_IRWXU | S_IRWXG;
         ino.i_uid = getuid();
         ino.i_gid = getgid();
         ino.i_atime = time(NULL);
@@ -190,7 +190,7 @@ int sfs_getattr(const char *path, struct stat *statbuf)
     block_read(sb.s_ino_start, buffer);
     memcpy((void *)&root_ino, (void *)buffer, sizeof(struct inode));
 
-    // memset(statbuf, 0, sizeof(struct stat));
+    memset(statbuf, 0, sizeof(struct stat));
     if (strcmp("/", path) == 0) {
         statbuf->st_ino = sb.s_root;
         statbuf->st_dev = 1;
@@ -302,9 +302,11 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     }
 
     // this file doesn't exist, create
+    log_msg("\nthis file doesn't exist\n");
     if (i == nentries) {
         // read all inodes
         inodes_data = malloc(BLOCK_SIZE * sb.s_ino_blocks);
+        log_msg("\n%d\n", sb.s_ino_blocks);
         for (j=0; j != root_ino.i_blocks; ++j) {
             memset(buffer, 0, BLOCK_SIZE);
             block_read(sb.s_ino_start+j, buffer);
@@ -324,7 +326,7 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
         else {
             // create this inode
             inodes_table[j].i_links = 1;
-            inodes_table[j].i_mode = S_IFREG | S_IRWXU;
+            inodes_table[j].i_mode = S_IFREG | S_IRWXU | S_IRWXG;
             inodes_table[j].i_uid = getuid();
             inodes_table[j].i_gid = getgid();
             inodes_table[j].i_atime = time(NULL);
